@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.python-version
+venv/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Spark & Hadoop
+metastore_db/
+derby.log
+.spark-*
+
+# Warehouse (development only)
+/warehouse/
+/tmp/
+
+# Results (commit ground truth, not outputs)
+results/*.csv
+results/*.png
+results/plot.gnuplot
+
+# OS
+.DS_Store
+.AppleDouble
+Thumbs.db
+
+# info
+info/

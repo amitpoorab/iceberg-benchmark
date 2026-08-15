@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iceberg-benchmark"
+version = "0.1.0"
+description = "Benchmark suite for measuring Iceberg compaction cadence cost trade-offs"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Amit Sharma", email = "amitpoorab@gmail.com"}
+]
+keywords = ["iceberg", "apache", "benchmark", "compaction", "data-engineering"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Database",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+
+dependencies = [
+    "pyspark==3.5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+iceberg-benchmark = "iceberg_benchmark.run_sweep:main"
+iceberg-plot = "iceberg_benchmark.plot:main"
+iceberg-sanity-check = "iceberg_benchmark.sanity_check:main"
+
+[tool.setuptools]
+packages = ["iceberg_benchmark"]
+package-dir = {"" = "src"}
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+select = ["E", "F", "W", "I"]
