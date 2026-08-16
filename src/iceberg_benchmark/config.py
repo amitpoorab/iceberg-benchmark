@@ -63,6 +63,7 @@ def get_config() -> BenchmarkConfig:
             random_seed=42,
         )
     elif profile == "ec2":
+        s3_bucket = os.getenv("S3_BUCKET", "iceberg-benchmark")
         return BenchmarkConfig(
             profile="ec2",
             base_rows=200_000_000,
@@ -71,8 +72,8 @@ def get_config() -> BenchmarkConfig:
             batch_rows=2000,
             scatter_parts=50,
             target_file_mb=256,
-            warehouse_path="s3a://iceberg-benchmark/warehouse",
-            cadences=[1, 6, 24, 168],
+            warehouse_path=f"s3a://{s3_bucket}/warehouse",
+            cadences=[1, 6, 24, 168], # , 168],
             delete_modes=["v2", "v3"],
             warmup_queries=3,
             measured_queries=5,

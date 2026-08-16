@@ -30,6 +30,9 @@ results/*.csv
 results/*.png
 results/plot.gnuplot
 
+#
+.env
+
 # OS
 .DS_Store
 .AppleDouble

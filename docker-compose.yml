@@ -1,0 +1,32 @@
+services:
+  iceberg-benchmark:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: iceberg-benchmark
+    environment:
+      # AWS Configuration (from .env file)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+
+      # Benchmark Configuration
+      BENCH_PROFILE: ${BENCH_PROFILE:-ec2}
+      S3_BUCKET: ${S3_BUCKET:-iceberg-benchmark}
+
+    # Mount directories
+    volumes:
+      # Source code (editable without rebuild)
+      - ./src:/app/src
+      - ./requirements.txt:/app/requirements.txt
+      - ./pyproject.toml:/app/pyproject.toml
+
+      # Results (output)
+      - ./results:/app/results
+
+      # AWS credentials (optional)
+      - ${HOME}/.aws:/root/.aws:ro
+
+    # Keep container running for interactive use
+    stdin_open: true
+    tty: true
