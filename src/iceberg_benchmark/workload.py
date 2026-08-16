@@ -183,8 +183,11 @@ def apply_correction_batch(
         table_name: Target table
         corrections_df: DataFrame with corrections (day, event_id, customer_id, amount, corrected_amount)
     """
+    # Deduplicate corrections by (day, event_id) - keep latest
+    corrections_dedup = corrections_df.dropDuplicates(['day', 'event_id'])
+
     # Register corrections as temp view for the merge
-    corrections_df.createOrReplaceTempView("__correction")
+    corrections_dedup.createOrReplaceTempView("__correction")
 
     spark.sql(f"""
     MERGE INTO {table_name} t
