@@ -183,6 +183,9 @@ def apply_correction_batch(
         table_name: Target table
         corrections_df: DataFrame with corrections (day, event_id, customer_id, amount, corrected_amount)
     """
+    # Register corrections as temp view for the merge
+    corrections_df.createOrReplaceTempView("__correction")
+
     spark.sql(f"""
     MERGE INTO {table_name} t
     USING (SELECT * FROM __correction) c
@@ -191,9 +194,6 @@ def apply_correction_batch(
     WHEN NOT MATCHED THEN INSERT (day, event_id, customer_id, amount, event_time)
         VALUES (c.day, c.event_id, c.customer_id, c.corrected_amount, CURRENT_TIMESTAMP())
     """)
-
-    # Register corrections as temp view for the merge
-    corrections_df.createOrReplaceTempView("__correction")
 
 
 if __name__ == "__main__":
