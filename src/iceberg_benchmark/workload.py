@@ -35,7 +35,6 @@ def build_base_table(
         seed: Random seed for reproducibility
     """
     random.seed(seed)
-    spark.sparkContext.setRandomSeed(seed)
 
     rows_per_day = base_rows // days
 
@@ -119,7 +118,6 @@ def make_correction_batch(
         DataFrame with columns (day, event_id, customer_id, amount, corrected_amount)
     """
     random.seed(seed + batch_idx)
-    spark.sparkContext.setRandomSeed(seed + batch_idx)
 
     # Sample existing data to get valid event_ids and days
     sample_df = spark.table(table_name).sample(fraction=0.01, seed=seed + batch_idx)
