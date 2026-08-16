@@ -81,7 +81,6 @@ def build_base_table(
 
     # Create or replace table
     df.write.format("iceberg") \
-        .partitionedBy("day") \
         .mode("overwrite") \
         .saveAsTable(table_name)
 
