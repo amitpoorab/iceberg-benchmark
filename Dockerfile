@@ -27,6 +27,5 @@ ENV AWS_REGION=us-east-1
 # Create results directory
 RUN mkdir -p /app/results
 
-# Default command
+# Default command (full benchmark by default, use --smoke for quick test)
 ENTRYPOINT ["python", "-m", "iceberg_benchmark.run_sweep"]
-CMD ["--smoke"]
