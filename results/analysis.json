@@ -1,0 +1,12 @@
+{
+  "h2_results": [
+    {
+      "format_version": 2,
+      "workload_id": "default",
+      "optimal_cadence": 6,
+      "optimal_cost_ms": 456.6824436187744,
+      "is_u_shaped": false
+    }
+  ],
+  "h4_5_results": []
+}

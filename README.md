@@ -1,10 +1,18 @@
-# Iceberg Compaction-Cadence Benchmark
+# From Fixed Schedules to Workload-Aware Maintenance: Optimizing Apache Iceberg Compaction Under Row-Level Updates
 
-Measures the cost curve of compaction cadence for late-arriving-data corrections on Apache Iceberg, comparing **v2 positional deletes** against **v3 deletion vectors**.
+A research project investigating the optimal maintenance policy for Apache Iceberg tables under row-level updates, and how Iceberg v3 deletion vectors change the operational tradeoffs compared to v2.
 
-## The Claim
+**Core question:** Given a workload's update rate, read rate, and data characteristics, when should you actually compact? And does v3 change that answer?
 
-Total cost = accumulated read degradation + compaction cost forms a **U-shaped curve** in compaction cadence. The minimum is **C*** (optimal cadence). We test whether v3 deletion vectors shift and/or flatten that curve compared to v2.
+## Research Hypothesis
+
+**H4 (Main):** Iceberg v3 deletion vectors materially change the workload-to-maintenance policy relationship, allowing longer maintenance intervals and/or reducing the sensitivity of total cost to suboptimal cadence relative to v2.
+
+**H3 (Supporting):** The optimal maintenance interval is predictable from workload characteristics (update rate, read rate, delete fraction, query selectivity).
+
+**H2 (Foundation):** Total cost = compaction cost + read-penalty cost exhibits a U-shaped curve, with a measurable optimal point.
+
+See [RESEARCH.md](RESEARCH.md) for full hypotheses and experimental design.
 
 ## Architecture
 
@@ -135,7 +143,7 @@ The optimal cadence C* is the cadence with minimum `total_cost_ms`.
 
 ## Measurement Discipline
 
-This benchmark follows **Gunnar Morling's Hardwood methodology** for credibility:
+This benchmark follows industry best practices for benchmarking credibility:
 
 - ✓ Warmup runs discarded (first 3 queries)
 - ✓ Median of measured runs (5 queries), not mean
@@ -196,4 +204,3 @@ Check if `spark.sql.iceberg.auto-compact.enabled` is truly `false` in your Spark
 
 - [Apache Iceberg Format Versions](https://iceberg.apache.org/spec/)
 - [Iceberg Deletion Vectors](https://iceberg.apache.org/docs/latest/delete-vectors/)
-- [Gunnar Morling's Hardwood Benchmarks](https://hardwood.openjdk.java.net/) — methodology inspiration
