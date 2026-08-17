@@ -66,7 +66,7 @@ def get_config() -> BenchmarkConfig:
         s3_bucket = os.getenv("S3_BUCKET", "iceberg-benchmark")
         return BenchmarkConfig(
             profile="ec2",
-            base_rows=200_000_000,
+            base_rows=50_000_000,
             days=30,
             batches_per_cell=168,
             batch_rows=2000,

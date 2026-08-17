@@ -22,7 +22,7 @@ def create_spark_session(warehouse_path: str) -> SparkSession:
     spark_builder = (
         SparkSession.builder
         .appName("IcebergBenchmark")
-        .config("spark.jars.packages", "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.11.0")
+        .config("spark.jars.packages", "org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:1.11.0,org.apache.hadoop:hadoop-aws:3.3.4")
         .config("spark.sql.catalog.iceberg", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.iceberg.type", "hadoop")
         .config("spark.sql.catalog.iceberg.warehouse", warehouse_path)
