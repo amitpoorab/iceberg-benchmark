@@ -8,6 +8,7 @@ import argparse
 import csv
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any
 from pyspark.sql import SparkSession
@@ -37,6 +38,7 @@ def run_one_sweep_cell(
     delete_mode: str,
     cadence: int,
     results_dir: Path,
+    per_batch_csv_path: Path = None,
     start_time: float = None,
 ) -> List[Dict[str, Any]]:
     """
@@ -72,7 +74,8 @@ def run_one_sweep_cell(
     # Apply batches with compaction on schedule
     print(f"2. Applying {cfg.batches_per_cell} batches (compacting every {cadence} batch)...")
     per_batch_results = []
-    per_batch_csv = results_dir / "per_batch.csv"
+    if per_batch_csv_path is None:
+        per_batch_csv_path = results_dir / "per_batch.csv"
 
     for batch_idx in range(cfg.batches_per_cell):
         # Apply correction
@@ -104,9 +107,11 @@ def run_one_sweep_cell(
             print(f"   Batch {batch_idx+1}: Compacting...")
             compact_result = compact_table(spark, table_name)
 
-        # Record result with timestamp
+        # Record result with timestamps
         elapsed_min = (time.time() - start_time) / 60 if start_time else 0
+        wall_clock_time = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %H:%M:%S")
         result = {
+            "timestamp_str": wall_clock_time,
             "timestamp_min": round(elapsed_min, 2),
             "batch_idx": batch_idx,
             "mode": delete_mode,
@@ -124,13 +129,13 @@ def run_one_sweep_cell(
         per_batch_results.append(result)
 
         # Write incrementally to per_batch.csv (append mode)
-        if batch_idx == 0 and not per_batch_csv.exists():
-            with open(per_batch_csv, "w", newline="") as f:
+        if batch_idx == 0 and not per_batch_csv_path.exists():
+            with open(per_batch_csv_path, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=result.keys())
                 writer.writeheader()
                 writer.writerow(result)
         else:
-            with open(per_batch_csv, "a", newline="") as f:
+            with open(per_batch_csv_path, "a", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=result.keys())
                 writer.writerow(result)
 
@@ -193,18 +198,29 @@ def run_full_sweep(cfg: BenchmarkConfig, spark: SparkSession, results_dir: Path,
     print(f"  Modes: {modes}")
     print(f"  Batches per cell: {batches}")
 
-    summary_csv = results_dir / "summary.csv"
-    cell_count = 0
+    # Generate timestamped filenames (never overwrites previous runs)
     sweep_start_time = time.time()
+    timestamp_str = datetime.fromtimestamp(sweep_start_time).strftime("%Y-%m-%d_%H-%M-%S")
+    summary_csv = results_dir / f"summary_{timestamp_str}.csv"
+    per_batch_csv = results_dir / f"per_batch_{timestamp_str}.csv"
+
+    print(f"\nResults will be saved to:")
+    print(f"  {summary_csv.name}")
+    print(f"  {per_batch_csv.name}")
+
+    cell_count = 0
 
     for delete_mode in modes:
         for cadence in cadences:
             # Run sweep cell
-            per_batch = run_one_sweep_cell(spark, cfg, delete_mode, cadence, results_dir, start_time=sweep_start_time)
+            per_batch = run_one_sweep_cell(spark, cfg, delete_mode, cadence, results_dir,
+                                           per_batch_csv_path=per_batch_csv, start_time=sweep_start_time)
 
             # Summarize
             summary = summarize_cell(per_batch)
             elapsed_min = (time.time() - sweep_start_time) / 60
+            wall_clock_time = datetime.fromtimestamp(time.time()).strftime("%Y-%m-%d %H:%M:%S")
+            summary["timestamp_str"] = wall_clock_time
             summary["timestamp_min"] = round(elapsed_min, 2)
             cell_count += 1
 

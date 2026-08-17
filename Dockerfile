@@ -11,6 +11,9 @@ WORKDIR /app
 # Copy project files
 COPY . .
 
+# Upgrade pip and install build tools (avoids setuptools issues with PyPI)
+RUN pip install --upgrade pip setuptools wheel
+
 # Install package dependencies
 RUN pip install -e .
 
