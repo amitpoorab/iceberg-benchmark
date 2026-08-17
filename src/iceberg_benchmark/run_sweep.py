@@ -7,6 +7,7 @@ record per-batch metrics.
 import argparse
 import csv
 import sys
+import time
 from pathlib import Path
 from typing import List, Dict, Any
 from pyspark.sql import SparkSession
@@ -36,6 +37,7 @@ def run_one_sweep_cell(
     delete_mode: str,
     cadence: int,
     results_dir: Path,
+    start_time: float = None,
 ) -> List[Dict[str, Any]]:
     """
     Run one (delete_mode, cadence) cell of the sweep.
@@ -70,6 +72,7 @@ def run_one_sweep_cell(
     # Apply batches with compaction on schedule
     print(f"2. Applying {cfg.batches_per_cell} batches (compacting every {cadence} batch)...")
     per_batch_results = []
+    per_batch_csv = results_dir / "per_batch.csv"
 
     for batch_idx in range(cfg.batches_per_cell):
         # Apply correction
@@ -101,8 +104,10 @@ def run_one_sweep_cell(
             print(f"   Batch {batch_idx+1}: Compacting...")
             compact_result = compact_table(spark, table_name)
 
-        # Record result
+        # Record result with timestamp
+        elapsed_min = (time.time() - start_time) / 60 if start_time else 0
         result = {
+            "timestamp_min": round(elapsed_min, 2),
             "batch_idx": batch_idx,
             "mode": delete_mode,
             "format_version": format_version,
@@ -117,6 +122,17 @@ def run_one_sweep_cell(
         }
 
         per_batch_results.append(result)
+
+        # Write incrementally to per_batch.csv (append mode)
+        if batch_idx == 0 and not per_batch_csv.exists():
+            with open(per_batch_csv, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=result.keys())
+                writer.writeheader()
+                writer.writerow(result)
+        else:
+            with open(per_batch_csv, "a", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=result.keys())
+                writer.writerow(result)
 
         if (batch_idx + 1) % 10 == 0:
             print(f"   Batch {batch_idx+1}: full_scan={latency['full_scan_ms']:.0f}ms, "
@@ -177,45 +193,42 @@ def run_full_sweep(cfg: BenchmarkConfig, spark: SparkSession, results_dir: Path,
     print(f"  Modes: {modes}")
     print(f"  Batches per cell: {batches}")
 
-    all_per_batch = []
-    all_summaries = []
+    summary_csv = results_dir / "summary.csv"
+    cell_count = 0
+    sweep_start_time = time.time()
 
     for delete_mode in modes:
         for cadence in cadences:
             # Run sweep cell
-            per_batch = run_one_sweep_cell(spark, cfg, delete_mode, cadence, results_dir)
+            per_batch = run_one_sweep_cell(spark, cfg, delete_mode, cadence, results_dir, start_time=sweep_start_time)
 
             # Summarize
             summary = summarize_cell(per_batch)
-            all_per_batch.extend(per_batch)
-            all_summaries.append(summary)
+            elapsed_min = (time.time() - sweep_start_time) / 60
+            summary["timestamp_min"] = round(elapsed_min, 2)
+            cell_count += 1
 
-            print(f"\nCell Summary:")
+            print(f"\nCell Summary ({cell_count}/{len(modes)*len(cadences)}) @ {elapsed_min:.1f}min:")
             print(f"  Total cost: {summary['total_cost_ms']:.0f}ms "
                   f"(read_penalty={summary['total_read_penalty_ms']:.0f}ms, "
                   f"compact={summary['total_compact_ms']:.0f}ms)")
 
+            # Write summary incrementally (append mode)
+            if cell_count == 1 and not summary_csv.exists():
+                with open(summary_csv, "w", newline="") as f:
+                    writer = csv.DictWriter(f, fieldnames=summary.keys())
+                    writer.writeheader()
+                    writer.writerow(summary)
+            else:
+                with open(summary_csv, "a", newline="") as f:
+                    writer = csv.DictWriter(f, fieldnames=summary.keys())
+                    writer.writerow(summary)
+
+            print(f"  ✓ Results available in results/summary.csv (run analyze.py to see trends)")
+
     # Write CSVs
     print(f"\n{'='*70}")
     print("Writing results...")
-
-    # Per-batch results
-    per_batch_csv = results_dir / "per_batch.csv"
-    with open(per_batch_csv, "w", newline="") as f:
-        if all_per_batch:
-            writer = csv.DictWriter(f, fieldnames=all_per_batch[0].keys())
-            writer.writeheader()
-            writer.writerows(all_per_batch)
-    print(f"  per_batch.csv: {len(all_per_batch)} rows")
-
-    # Summary results
-    summary_csv = results_dir / "summary.csv"
-    with open(summary_csv, "w", newline="") as f:
-        if all_summaries:
-            writer = csv.DictWriter(f, fieldnames=all_summaries[0].keys())
-            writer.writeheader()
-            writer.writerows(all_summaries)
-    print(f"  summary.csv: {len(all_summaries)} rows")
 
     print(f"\nResults written to {results_dir}")
 
